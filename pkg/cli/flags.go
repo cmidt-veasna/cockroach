@@ -176,15 +176,6 @@ func (b *insecureValue) Set(s string) error {
 	}
 	b.isSet = true
 	b.ctx.Insecure = v
-	if b.ctx.Insecure {
-		// If --insecure is specified, clear any of the existing security flags if
-		// they were set. This allows composition of command lines where a later
-		// specification of --insecure clears an earlier security specification.
-		b.ctx.SSLCA = ""
-		b.ctx.SSLCAKey = ""
-		b.ctx.SSLCert = ""
-		b.ctx.SSLCertKey = ""
-	}
 	return nil
 }
 
@@ -317,9 +308,6 @@ func init() {
 		f.Lookup(cliflags.Insecure.Name).NoOptDefVal = "true"
 
 		// Certificate flags.
-		stringFlag(f, &baseCfg.SSLCA, cliflags.CACert, baseCfg.SSLCA)
-		stringFlag(f, &baseCfg.SSLCert, cliflags.Cert, baseCfg.SSLCert)
-		stringFlag(f, &baseCfg.SSLCertKey, cliflags.Key, baseCfg.SSLCertKey)
 		stringFlag(f, &baseCfg.SSLCertsDir, cliflags.CertsDir, base.DefaultCertsDirectory)
 
 		// Cluster joining flags.
@@ -337,10 +325,7 @@ func init() {
 	for _, cmd := range certCmds {
 		f := cmd.Flags()
 		// Certificate flags.
-		stringFlag(f, &baseCfg.SSLCA, cliflags.CACert, baseCfg.SSLCA)
 		stringFlag(f, &baseCfg.SSLCAKey, cliflags.CAKey, baseCfg.SSLCAKey)
-		stringFlag(f, &baseCfg.SSLCert, cliflags.Cert, baseCfg.SSLCert)
-		stringFlag(f, &baseCfg.SSLCertKey, cliflags.Key, baseCfg.SSLCertKey)
 		stringFlag(f, &baseCfg.SSLCertsDir, cliflags.CertsDir, base.DefaultCertsDirectory)
 		intFlag(f, &keySize, cliflags.KeySize, defaultKeySize)
 	}
@@ -371,9 +356,6 @@ func init() {
 		f.Lookup(cliflags.Insecure.Name).NoOptDefVal = "true"
 
 		// Certificate flags.
-		stringFlag(f, &baseCfg.SSLCA, cliflags.CACert, baseCfg.SSLCA)
-		stringFlag(f, &baseCfg.SSLCert, cliflags.Cert, baseCfg.SSLCert)
-		stringFlag(f, &baseCfg.SSLCertKey, cliflags.Key, baseCfg.SSLCertKey)
 		stringFlag(f, &baseCfg.SSLCertsDir, cliflags.CertsDir, base.DefaultCertsDirectory)
 	}
 
@@ -437,18 +419,7 @@ func init() {
 	}
 }
 
-func extraSSLInit() {
-	// If any of the security flags have been set, clear the insecure
-	// setting. Note that we do the inverse when the --insecure flag is
-	// set. See insecureValue.Set().
-	if baseCfg.SSLCA != "" || baseCfg.SSLCAKey != "" ||
-		baseCfg.SSLCert != "" || baseCfg.SSLCertKey != "" {
-		baseCfg.Insecure = false
-	}
-}
-
 func extraServerFlagInit() {
-	extraSSLInit()
 	serverCfg.Addr = net.JoinHostPort(serverConnHost, serverConnPort)
 	if serverAdvertiseHost == "" {
 		serverAdvertiseHost = serverConnHost
@@ -461,7 +432,6 @@ func extraServerFlagInit() {
 }
 
 func extraClientFlagInit() {
-	extraSSLInit()
 	serverCfg.Addr = net.JoinHostPort(clientConnHost, clientConnPort)
 	serverCfg.AdvertiseAddr = serverCfg.Addr
 	if serverHTTPHost == "" {
